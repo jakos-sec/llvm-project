@@ -20,6 +20,10 @@
 #include "startup/linux/gnu_property_section.h"
 #include "startup/linux/irelative.h"
 
+#if defined(LIBC_ENABLE_CF_PROTECTION_FULL)
+#include "startup/linux/cf_protection.h"
+#endif
+
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
@@ -162,6 +166,22 @@ static TLSDescriptor tls;
   call_init_array_callbacks(static_cast<int>(app.args->argc),
                             reinterpret_cast<char **>(app.args->argv),
                             reinterpret_cast<char **>(env_ptr));
+
+#if defined(LIBC_ENABLE_CF_PROTECTION_FULL)
+  // We currently only use gnu_property for SHSTK support and therefore only
+  // need to parse it in that case.
+  GnuPropertySection gnu_property;
+  if (gnu_property.parse(gnu_property_phdr, base)) {
+    if (gnu_property.is_shstk_supported() &&
+        is_cpu_cf_protection_return_compatible()) {
+      // Enable SHSTK only if it is enabled on the static executable and
+      // supported by the CPU.
+      if (!enable_cf_protection_return())
+        exit(-1);
+    }
+  }
+  // TODO: add support for calling ARCH_SHSTK_LOCK to forbid disabling support.
+#endif
 
   int retval = main(static_cast<int>(app.args->argc),
                     reinterpret_cast<char **>(app.args->argv),

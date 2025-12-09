@@ -107,6 +107,7 @@ add_object_library(
     do_start.cpp
   HDRS
     do_start.h
+    cf_protection.h
     irelative.h
   DEPENDS
     libc.config.app_h
@@ -119,6 +120,7 @@ add_object_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.thread
     libc.src.__support.macros.config
+    libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.cf_protection
     libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.irelative
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
@@ -135,6 +137,7 @@ merge_relocatable_object(
   .${LIBC_TARGET_ARCHITECTURE}.start
   .${LIBC_TARGET_ARCHITECTURE}.tls
   .${LIBC_TARGET_ARCHITECTURE}.irelative
+  .${LIBC_TARGET_ARCHITECTURE}.cf_protection
   .do_start
   .gnu_property_section
 )
