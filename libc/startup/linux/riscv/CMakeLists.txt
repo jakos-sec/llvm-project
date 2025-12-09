@@ -41,3 +41,16 @@ add_startup_object(
     -ffreestanding
     -fno-builtin
 )
+
+add_startup_object(
+  cf_protection
+  HDRS
+    cf_protection.h
+  DEPENDS
+    libc.src.__support.macros.config
+  COMPILE_OPTIONS
+    -fno-stack-protector
+    -fno-omit-frame-pointer
+    -ffreestanding
+    -fno-builtin
+)

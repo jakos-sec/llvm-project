@@ -121,6 +121,10 @@
     "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
       "value": true,
       "doc": "Enable -fstack-protector-strong to defend against stack smashing attack."
+    },
+    "LIBC_CONF_ENABLE_CF_PROTECTION_FULL": {
+      "value": false,
+      "doc": "Enable -fcf-protection=full to compile files linked into the binary with the necessary support."
     }
   },
   "pthread": {
