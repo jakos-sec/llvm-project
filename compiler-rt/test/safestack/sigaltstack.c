@@ -19,6 +19,11 @@ extern void *__get_unsafe_stack_ptr();
 extern void *__get_unsafe_stack_top();
 extern void *__get_unsafe_stack_bottom();
 
+extern int unsafe_sigaltstack(size_t ss_size);
+extern void *__get_unsafe_sigalt_stack_ptr();
+extern void *__get_unsafe_sigalt_stack_top();
+extern void *__get_unsafe_sigalt_stack_bottom();
+
 __thread int signal_handlers_called = 0;
 
 void signal_handler(int signo) {
@@ -47,6 +52,7 @@ void *t1_start(void *ptr) {
   sigstk.ss_size = ss_size;
   sigstk.ss_sp = ss_sp;
 
+  unsafe_sigaltstack(sigstk.ss_size);
   sigaltstack(&sigstk, NULL);
 
   // Test that after sigaltstack is set, it signal handling still works.
@@ -62,6 +68,9 @@ int main() {
   char c[] = "hello world";
   puts(c);
 
+  // Make sure no sigaltstack is allocated by default.
+  assert(!__get_unsafe_sigalt_stack_ptr());
+
   stack_t sigstk = {};
   size_t ss_size = 4096 * 4;
   void *ss_sp = mmap(NULL, sigstk.ss_size, PROT_READ | PROT_WRITE,
@@ -69,7 +78,15 @@ int main() {
   sigstk.ss_size = ss_size;
   sigstk.ss_sp = ss_sp;
 
+  unsafe_sigaltstack(sigstk.ss_size);
   sigaltstack(&sigstk, NULL);
+
+  // Make sure unsafe_sigaltstack allocated the unsafe sigaltstack with the
+  // correct size.
+  assert(__get_unsafe_sigalt_stack_ptr());
+  assert(__get_unsafe_sigalt_stack_ptr() == __get_unsafe_sigalt_stack_top());
+  assert((__get_unsafe_sigalt_stack_top() -
+          __get_unsafe_sigalt_stack_bottom()) == sigstk.ss_size);
 
   // Make sure retrieving the sigaltstack works without problems.
   sigaltstack(NULL, &sigstk);
@@ -80,8 +97,15 @@ int main() {
   new_sigstk.ss_sp = mmap(NULL, new_sigstk.ss_size, PROT_READ | PROT_WRITE,
                           MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
 
+  unsafe_sigaltstack(new_sigstk.ss_size);
   sigaltstack(&new_sigstk, NULL);
   munmap(ss_sp, ss_size);
+
+  // Make sure updating the size of the unsafe sigaltstack also updates when
+  // setting a new sigaltstack.
+  assert(__get_unsafe_sigalt_stack_ptr());
+  assert((__get_unsafe_sigalt_stack_top() -
+          __get_unsafe_sigalt_stack_bottom()) == new_sigstk.ss_size);
 
   struct sigaction sa;
   sa.sa_handler = signal_handler;
