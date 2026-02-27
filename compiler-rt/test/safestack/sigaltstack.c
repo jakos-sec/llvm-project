@@ -20,6 +20,7 @@ extern void *__get_unsafe_sigalt_stack_top();
 extern void *__get_unsafe_sigalt_stack_bottom();
 
 __thread int signal_handlers_called = 0;
+__thread int sigaltstack_called = 0;
 
 void signal_handler(int signo) {
   signal_handlers_called += 1;
@@ -27,10 +28,33 @@ void signal_handler(int signo) {
          __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
 }
 
+void signal_sigalt_handler(int signo) {
+  signal_handlers_called += 1;
+  if (sigaltstack_called) {
+    assert(__get_unsafe_stack_ptr() <= __get_unsafe_sigalt_stack_top() &&
+           __get_unsafe_stack_ptr() >= __get_unsafe_sigalt_stack_bottom());
+  } else {
+    assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
+        __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+  }
+}
+
 void signal_sigaction(int signo, siginfo_t *si, void *uc) {
   signal_handlers_called += 1;
   assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
          __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+}
+
+void signal_sigalt_sigaction(int signo, siginfo_t *si, void *uc) {
+  signal_handlers_called += 1;
+  if (sigaltstack_called) {
+    assert(__get_unsafe_stack_ptr() <= __get_unsafe_sigalt_stack_top() &&
+           __get_unsafe_stack_ptr() >= __get_unsafe_sigalt_stack_bottom());
+  } else {
+    assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
+         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+  }
 }
 
 void *t1_start(void *ptr) {
@@ -49,6 +73,7 @@ void *t1_start(void *ptr) {
 
   unsafe_sigaltstack(sigstk.ss_size);
   sigaltstack(&sigstk, NULL);
+  sigaltstack_called = 1;
 
   // Test that after sigaltstack is set, it signal handling still works.
   raise(SIGUSR1);
@@ -75,6 +100,7 @@ int main() {
 
   unsafe_sigaltstack(sigstk.ss_size);
   sigaltstack(&sigstk, NULL);
+  sigaltstack_called = 1;
 
   // Make sure unsafe_sigaltstack allocated the unsafe sigaltstack with the
   // correct size.
@@ -116,18 +142,17 @@ int main() {
   raise(SIGUSR1);
   raise(SIGUSR2);
 
-  sa.sa_handler = signal_handler;
+  sa.sa_handler = signal_sigalt_handler;
   sa.sa_flags = SA_ONSTACK;
   sigemptyset(&sa.sa_mask);
   assert(sigaction(SIGUSR1, &sa, NULL) != -1);
 
-  sa.sa_sigaction = signal_sigaction;
+  sa.sa_sigaction = signal_sigalt_sigaction;
   sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
   sigemptyset(&sa.sa_mask);
   assert(sigaction(SIGUSR2, &sa, NULL) != -1);
 
-  // Test that we do not crash when SA_ONSTACK is set but currently still use
-  // the normal unsafe sigaltstack.
+  // Test that we do do use the unsafe sigaltstack if SA_ONSTACK is set.
   raise(SIGUSR1);
   raise(SIGUSR2);
 
