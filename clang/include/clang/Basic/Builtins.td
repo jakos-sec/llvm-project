@@ -4661,6 +4661,12 @@ def GetUnsafeStackPtr : Builtin {
   let Prototype = "void*()";
 }
 
+def UnsafeSigaltstack : Builtin {
+  let Spellings = ["__builtin___unsafe_sigaltstack"];
+  let Attributes = [NoThrow, FunctionWithBuiltinPrefix];
+  let Prototype = "int(size_t)";
+}
+
 // Nontemporal loads/stores builtins.
 def NontemporalStore : Builtin {
   let Spellings = ["__builtin_nontemporal_store"];
