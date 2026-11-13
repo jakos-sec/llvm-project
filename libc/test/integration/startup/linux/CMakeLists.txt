@@ -84,3 +84,54 @@ add_integration_test(
     libc.include.link
     libc.src.link._r_debug
 )
+
+set(no_shstk_test_compile_options "")
+if(LIBC_CC_SUPPORTS_FCF_PROTECTION)
+  list(APPEND no_shstk_test_compile_options -fcf-protection=none)
+endif()
+
+add_integration_test(
+  startup_cf_protection_shstk_test
+  SUITE libc-startup-tests
+  SRCS
+    cf_protection_shstk_test.cpp
+  DEPENDS
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.signal_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_auxv_macros
+    libc.hdr.sys_wait_macros
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
+    libc.src.__support.macros.properties.architectures
+    libc.src.link._r_debug
+    libc.src.sys.auxv.getauxval
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.fork
+    libc.startup.linux.cf_protection
+    libc.startup.linux.gnu_property_section
+)
+
+add_integration_test(
+  startup_cf_protection_no_shstk_test
+  SUITE libc-startup-tests
+  SRCS
+    cf_protection_no_shstk_test.cpp
+  COMPILE_OPTIONS
+    ${no_shstk_test_compile_options}
+  DEPENDS
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_auxv_macros
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
+    libc.src.__support.macros.properties.architectures
+    libc.src.link._r_debug
+    libc.src.sys.auxv.getauxval
+    libc.startup.linux.cf_protection
+    libc.startup.linux.gnu_property_section
+)

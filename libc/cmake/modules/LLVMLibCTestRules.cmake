@@ -89,6 +89,10 @@ function(_get_common_test_compile_options_impl output_var c_test)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
+    if(LIBC_CONF_ENABLE_CF_PROTECTION_FULL AND LIBC_CC_SUPPORTS_FCF_PROTECTION)
+      list(APPEND compile_options "-fcf-protection=full")
+    endif()
+
     list(APPEND compile_options "-Wall")
     list(APPEND compile_options "-Wextra")
     # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.

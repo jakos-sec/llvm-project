@@ -1,13 +1,20 @@
-//===-- Implementation file of do_start -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux process startup implementation (do_start).
+///
+//===----------------------------------------------------------------------===//
+
 #include "startup/linux/do_start.h"
 #include "config/linux/app.h"
 #include "hdr/elf_proxy.h"
+#include "hdr/errno_macros.h"
 #include "hdr/link_macros.h"
 #include "hdr/pthread_macros.h"
 #include "hdr/stdint_proxy.h"
@@ -18,7 +25,9 @@
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/exit_group.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/tcb.h"
 #include "src/__support/threads/thread.h"
@@ -28,6 +37,7 @@
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
+#include "startup/linux/cf_protection.h"
 #include "startup/linux/gnu_property_section.h"
 #include "startup/linux/irelative.h"
 #include <sys/syscall.h>
@@ -171,6 +181,32 @@ static TLSDescriptor tls;
       gnu_property_phdr = &phdr;
     // TODO: adjust PT_GNU_STACK
   }
+
+#if defined(LIBC_COPT_ENABLE_CF_PROTECTION_FULL)
+  // Enable hardware return-address protection (such as x86_64 CET Shadow Stack)
+  // before running IFUNC resolvers or .preinit_array/.init_array constructors
+  // so early initialization and any threads spawned in constructors inherit it.
+  if (gnu_property_phdr != nullptr) {
+    GnuPropertySection gnu_property;
+    if (gnu_property.parse(gnu_property_phdr, static_cast<ElfW(Addr)>(base)) &&
+        gnu_property.is_shstk_supported() &&
+        is_cpu_cf_protection_return_compatible()) {
+      // enable_cf_protection_return() must be inlined here because do_start is
+      // [[noreturn]] and never executes RET across shadow stack activation.
+      if (ErrorOr<void> res = enable_cf_protection_return();
+          LIBC_UNLIKELY(!res.has_value())) {
+        int err = res.error();
+        // Kernels or sandboxes without user shadow stack support return EINVAL,
+        // EOPNOTSUPP, ENOSYS, or EPERM even on CET-capable CPUs; continue
+        // permissively in those cases, and fail closed on errors like ENOMEM.
+        if (err != EINVAL && err != EOPNOTSUPP && err != ENOSYS && err != EPERM)
+          linux_syscalls::exit_group(1);
+      }
+    }
+  }
+  // TODO: Lock shadow stack features (e.g., ARCH_SHSTK_LOCK) once runtime
+  // feature-locking policy is finalized.
+#endif
 
   main_map.l_addr = base;
   main_map.l_name = const_cast<char *>("");

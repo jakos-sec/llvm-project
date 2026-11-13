@@ -106,6 +106,15 @@ add_object_library(
     -fno-stack-protector
 )
 
+add_header_library(
+  cf_protection
+  HDRS
+    cf_protection.h
+  DEPENDS
+    .${LIBC_TARGET_ARCHITECTURE}.cf_protection
+    libc.src.__support.macros.properties.architectures
+)
+
 add_object_library(
   do_start
   SRCS
@@ -114,8 +123,11 @@ add_object_library(
     do_start.h
     irelative.h
   DEPENDS
+    .cf_protection
+    .gnu_property_section
     libc.config.app_h
     libc.hdr.elf_proxy
+    libc.hdr.errno_macros
     libc.hdr.link_macros
     libc.hdr.pthread_macros
     libc.hdr.stdint_proxy
@@ -127,11 +139,13 @@ add_object_library(
     libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
     libc.src.__support.threads.tcb
     libc.src.__support.threads.thread
     libc.src.__support.threads.linux.futex_utils
     libc.src.__support.threads.linux.tls
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
     libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.irelative
     libc.src.link._r_debug
     libc.src.stdlib.exit

@@ -36,6 +36,9 @@ set(GWP_ASAN_HEADERS
 set(GWP_ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS} -fno-rtti -fno-exceptions
     -nostdinc++ -pthread -fno-omit-frame-pointer)
 append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC GWP_ASAN_CFLAGS)
+if(COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+  append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full GWP_ASAN_CFLAGS)
+endif()
 # append_list_if(COMPILER_RT_HAS_SANITIZER_COMMON ${SANITIZER_COMMON_CFLAGS} GWP_ASAN_CFLAGS)
 
 # Remove -stdlib= which is unused when passing -nostdinc++.

@@ -28,3 +28,15 @@ add_startup_object(
     -ffreestanding
     -fno-builtin
 )
+
+add_header_library(
+  cf_protection
+  HDRS
+    cf_protection.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)

@@ -168,3 +168,8 @@ check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
 
 # clang-all, gcc-8+
 check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
+
+# clang-7+, gcc-8+ on supported targets (e.g. x86_64)
+set(CMAKE_REQUIRED_FLAGS "${LIBC_COMPILE_OPTIONS_DEFAULT}")
+check_cxx_compiler_flag("-fcf-protection=full" LIBC_CC_SUPPORTS_FCF_PROTECTION)
+unset(CMAKE_REQUIRED_FLAGS)

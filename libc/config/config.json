@@ -129,6 +129,10 @@
     "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
       "value": true,
       "doc": "Enable -fstack-protector-strong to defend against stack smashing attack."
+    },
+    "LIBC_CONF_ENABLE_CF_PROTECTION_FULL": {
+      "value": false,
+      "doc": "Compile libc with -fcf-protection=full and enable hardware control-flow protection (such as x86_64 CET Shadow Stack) during Linux startup when supported by the binary and CPU. Also pass -DCOMPILER_RT_ENABLE_CET=ON when linking compiler-rt builtins or standalone Scudo."
     }
   },
   "pthread": {
